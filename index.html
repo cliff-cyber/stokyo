@@ -1,0 +1,460 @@
+import React, { useRef, useEffect, useState } from "react";
+import { motion, useAnimation, useInView } from "framer-motion";
+
+// 1. グローバルな色テーマ配列
+const colorThemes = [
+  { bg: "#222222", fg: "#F7F6F2", accent: "#C6A33B" }, // Hero
+  { bg: "#F7F6F2", fg: "#222222", accent: "#C6A33B" }, // Concept
+  { bg: "#fffbe8", fg: "#222222", accent: "#C6A33B" }, // Menu
+  { bg: "#F7F6F2", fg: "#222222", accent: "#C6A33B" }, // Reservation
+  { bg: "#fffbe8", fg: "#222222", accent: "#C6A33B" }, // Access
+  { bg: "#F7F6F2", fg: "#222222", accent: "#C6A33B" }, // Contact
+];
+
+const fontMontserrat = "'Montserrat', 'Noto Sans JP', Arial, sans-serif";
+const fontNoto = "'Noto Sans JP', 'Montserrat', Arial, sans-serif";
+
+// 2. 各セクションID
+const SECTIONS = [
+  { id: "hero", label: "Top" },
+  { id: "concept", label: "Concept" },
+  { id: "menu", label: "Menu" },
+  { id: "reservation", label: "Reservation" },
+  { id: "access", label: "Access" },
+  { id: "contact", label: "Contact" },
+];
+
+// 3. 画像類
+const heroImg = "https://images.unsplash.com/photo-1464983953574-0892a716854b?auto=format&fit=crop&w=1440&q=80";
+const koiImg = "https://images.unsplash.com/photo-1519125323398-675f0ddb6308?auto=format&fit=crop&w=900&q=80";
+const menuImg = "https://images.unsplash.com/photo-1519864600265-abb23847ef2c?auto=format&fit=crop&w=900&q=80";
+const smokeImg = "https://assets-global.website-files.com/603c3772b28b5d63d41b73e2/63c53ce429e2bc017070012c_smoke-min.png";
+
+function useScrollSectionHighlight(refs) {
+  // Hook: スクロールでどのセクションか判定し、テーマ配色を決定
+  const [activeIdx, setActiveIdx] = useState(0);
+
+  useEffect(() => {
+    function onScroll() {
+      let idx = 0;
+      for (let i = 0; i < refs.length; i++) {
+        const el = refs[i].current;
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          if (rect.top < window.innerHeight / 2 - 80) idx = i;
+        }
+      }
+      setActiveIdx(idx);
+    }
+    window.addEventListener("scroll", onScroll);
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [refs]);
+  return activeIdx;
+}
+
+function ParallaxBG({ src, intensity = 20 }) {
+  // スクロール量でパララックス
+  const [offset, setOffset] = useState(0);
+  useEffect(() => {
+    const handler = () => setOffset(window.scrollY || 0);
+    window.addEventListener("scroll", handler);
+    return () => window.removeEventListener("scroll", handler);
+  }, []);
+  return (
+    <img
+      src={src}
+      alt=""
+      aria-hidden
+      className="absolute inset-0 w-full h-full object-cover pointer-events-none z-0 transition-all duration-700"
+      style={{ transform: `translateY(${-(offset / intensity)}px)` }}
+    />
+  );
+}
+
+// ナビゲーションバー
+function NavBar({ activeIdx, accent }) {
+  return (
+    <nav className="fixed top-0 left-0 w-full z-40 flex justify-center bg-white/10 backdrop-blur-md shadow-sm py-3 px-4 transition-all">
+      <div className="flex gap-2 md:gap-7 items-center">
+        {SECTIONS.map((s, i) =>
+          <a
+            key={s.id}
+            href={`#${s.id}`}
+            className={`font-montserrat font-bold text-base md:text-lg px-2 pb-1 rounded transition 
+            ${i === activeIdx
+                ? "text-[#C6A33B] bg-white/30 shadow"
+                : "text-[#F7F6F2] hover:text-[#C6A33B]"}`
+            }
+            style={{
+              letterSpacing: ".04em",
+              borderBottom: i === activeIdx ? `3px solid ${accent}` : "none",
+            }}
+          >{s.label}</a>
+        )}
+        <a
+          href="https://www.instagram.com/stokyoshishalounge/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="bg-[#C6A33B] text-[#222] rounded-lg px-4 py-1 font-bold hover:scale-105 transition ml-1 md:ml-2 shadow border border-[#c2ae67]/40"
+        >予約(DM)</a>
+      </div>
+    </nav>
+  );
+}
+
+// セクションごとのフェードイン演出
+function SectionFadeIn({ children, threshold = 0.25 }) {
+  const ref = useRef();
+  const isInView = useInView(ref, { once: true, amount: threshold });
+  return (
+    <motion.section
+      ref={ref}
+      initial={{ opacity: 0, y: 50, filter: "blur(4px)" }}
+      animate={isInView ? { opacity: 1, y: 0, filter: "blur(0)" } : {}}
+      transition={{ duration: 0.8, ease: "easeOut" }}
+    >
+      {children}
+    </motion.section>
+  );
+}
+
+// ボタンにリッチな配色アニメ
+function AnimatedButton({ children, href, accent }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="relative inline-block px-9 py-4 text-xl rounded-xl font-bold overflow-hidden shadow-lg transition-all group"
+      style={{
+        background: `linear-gradient(90deg, ${accent} 0%, #F7F6F2 90%)`,
+        color: "#222",
+        border: `1.5px solid ${accent}`
+      }}
+    >
+      <span className="relative z-10">{children}</span>
+      <motion.span
+        className="absolute inset-0 rounded-xl"
+        initial={{ opacity: 0 }}
+        whileHover={{ opacity: 0.13 }}
+        transition={{ duration: 0.6 }}
+        style={{
+          background: `linear-gradient(120deg, #fffbe8 0%, ${accent} 100%)`
+        }}
+      />
+    </a>
+  );
+}
+
+// メインコンポーネント
+export default function STokyoLanding() {
+  // 各セクションref
+  const sectionRefs = SECTIONS.map(() => useRef());
+  // スクロールによる配色/アクティブセクション自動切替
+  const activeIdx = useScrollSectionHighlight(sectionRefs);
+  const theme = colorThemes[activeIdx];
+
+  // ヒーロー背景カラーアニメ
+  const heroAnim = useAnimation();
+  useEffect(() => {
+    heroAnim.start({
+      background: [
+        "radial-gradient(ellipse 90% 60% at 50% 35%, #fffbe833 0%, #222 80%)",
+        "radial-gradient(ellipse 90% 60% at 50% 50%, #fffbe855 0%, #222 80%)",
+        "radial-gradient(ellipse 90% 60% at 50% 35%, #fffbe833 0%, #222 80%)"
+      ],
+      transition: { duration: 11, repeat: Infinity }
+    });
+  }, []);
+
+  // Hero煙フェード演出
+  const [showSmoke, setShowSmoke] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setShowSmoke(false), 3500);
+    return () => clearTimeout(t);
+  }, []);
+
+  // 1. Google Fontsを<head>で読み込み必須！↓
+
+  return (
+    <div
+      style={{
+        fontFamily: fontNoto,
+        background: theme.bg,
+        color: theme.fg,
+        transition: "background 1s, color 1s"
+      }}
+    >
+      {/* Google Fonts (開発時は<head>に直接追加!) */}
+      <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&family=Noto+Sans+JP:wght@400;500&display=swap" rel="stylesheet" />
+
+      {/* ナビ */}
+      <NavBar activeIdx={activeIdx} accent={theme.accent} />
+
+      {/* Heroセクション */}
+      <section
+        id="hero"
+        ref={sectionRefs[0]}
+        className="relative min-h-[100vh] flex flex-col items-center justify-center text-center"
+        style={{ fontFamily: fontMontserrat, background: theme.bg, color: "#fff" }}
+      >
+        <ParallaxBG src={heroImg} intensity={30} />
+        <motion.div animate={heroAnim} className="absolute inset-0 pointer-events-none z-10" />
+        {showSmoke &&
+          <img
+            src={smokeImg}
+            alt="smoke"
+            className="absolute inset-0 w-full h-full object-cover opacity-60 pointer-events-none select-none mix-blend-screen z-20 animate-fadein"
+            style={{ animation: "fadein 2.5s 0.5s both" }}
+          />
+        }
+        <div className="relative z-30 flex flex-col items-center px-4 pt-44 pb-24">
+          <motion.h1
+            className="font-montserrat text-4xl md:text-6xl font-bold text-white mb-5 drop-shadow-2xl"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.45, duration: 0.9, ease: 'easeOut' }}
+          >
+            地下庭園 × Daytime Shisha
+          </motion.h1>
+          <motion.div
+            className="font-noto text-lg md:text-2xl text-white/90 mb-8"
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7, duration: 0.7 }}
+          >
+            <span className="inline-block bg-[#222]/70 rounded-lg px-5 py-2">西麻布で、陽の光とともに浸る唯一無二の空間</span>
+          </motion.div>
+          <AnimatedButton
+            href="https://www.instagram.com/stokyoshishalounge/"
+            accent={theme.accent}
+          >Instagram DMで予約</AnimatedButton>
+        </div>
+        {/* スクロールガイド */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center">
+          <motion.div
+            animate={{
+              y: [0, 10, 0],
+              opacity: [1, 0.65, 1]
+            }}
+            transition={{ repeat: Infinity, duration: 2.4 }}
+          >
+            <svg width="28" height="38" viewBox="0 0 28 38" fill="none">
+              <rect x="1.5" y="1.5" width="25" height="35" rx="12.5" stroke="#C6A33B" strokeWidth="3" />
+              <circle cx="14" cy="11" r="2.7" fill="#C6A33B" />
+            </svg>
+          </motion.div>
+          <span className="text-[#C6A33B] text-xs mt-2">Scroll</span>
+        </div>
+      </section>
+
+      {/* Concept */}
+      <SectionFadeIn>
+        <section
+          id="concept"
+          ref={sectionRefs[1]}
+          className="py-24 bg-[#F7F6F2] text-[#222] text-center relative"
+        >
+          <motion.h2
+            className="font-montserrat text-3xl md:text-5xl font-bold mb-5"
+            initial={{ opacity: 0, x: -100 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.7 }}
+          >静謐の庭園、光と煙の書斎</motion.h2>
+          <p className="text-lg md:text-2xl mb-7 leading-relaxed">
+            地下へ一歩降りると、都会の鼓動が遠のき、光と水音が交差する静謐な庭園が現れる。<br />
+            トップライトから射す自然光が水面を照らし、鯉の軌跡が白壁に揺れる。<br />
+            日中だけ開かれる「光と煙の書斎」。深いソファに身を沈め、煙のレイヤーを透かす光を眺めれば、呼吸は緩やかになり、思考は静かに深まる。
+          </p>
+          <motion.img
+            src={koiImg}
+            alt="鯉池"
+            className="rounded-2xl w-full shadow-lg object-cover max-h-72 mx-auto mb-10"
+            initial={{ opacity: 0, scale: 0.92 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1.2, type: "spring" }}
+          />
+          <ul className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 max-w-2xl mx-auto text-left text-lg">
+            <li><b>光と水音：</b>トップライトと循環水が、都心に静寂と涼しさをもたらす</li>
+            <li><b>香りと煙：</b>調香師が選ぶ葉と香料、澄んだ煙と優しい香り</li>
+            <li><b>機能美：</b>空調と水温管理で、いつでも快適</li>
+            <li><b>五感の調律：</b>スタッフが音・香・光を調律し、最適な環境を維持</li>
+          </ul>
+        </section>
+      </SectionFadeIn>
+
+      {/* Menu */}
+      <SectionFadeIn>
+        <section
+          id="menu"
+          ref={sectionRefs[2]}
+          className="py-24 bg-[#fffbe8] text-[#222] relative"
+        >
+          <motion.h2
+            className="font-montserrat text-3xl md:text-5xl font-bold mb-7"
+            initial={{ opacity: 0, x: 80 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.7 }}
+          >メニュー / Menu</motion.h2>
+          <motion.img
+            src={menuImg}
+            alt="シーシャメニュー"
+            className="rounded-xl w-full max-h-60 object-cover shadow mb-8 mx-auto"
+            initial={{ opacity: 0, scale: 0.93 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1.1, type: "spring" }}
+          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl mx-auto">
+            <div>
+              <h3 className="font-semibold text-xl mb-2">シーシャ台</h3>
+              <ul className="space-y-1 text-lg">
+                <li>Standard シーシャ：<b>￥2,800</b></li>
+                <li>Dark Leaf（高濃度葉）：<b>￥3,500</b></li>
+                <li>Ice Hose（アイスホース）：<b>＋￥600</b></li>
+                <li>Share Charge（追加シェア）：<b>＋￥800</b></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-semibold text-xl mb-2">ドリンク</h3>
+              <ul className="space-y-1 text-lg">
+                <li>クラフトジンジャー／チャイ／季節のハーブウォーター：<b>各￥600</b></li>
+                <li>※アルコール提供なし</li>
+              </ul>
+              <h3 className="font-semibold text-lg mt-4">定番フレーバー</h3>
+              <div className="text-base">
+                ダブルアップル／ミント／グレープ／レモンミント／ジャスミン ほか<br />
+                <span className="text-[#C6A33B]">季節限定やシグネチャーブレンドも随時ご用意</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      </SectionFadeIn>
+
+      {/* Reservation */}
+      <SectionFadeIn>
+        <section
+          id="reservation"
+          ref={sectionRefs[3]}
+          className="py-24 bg-[#F7F6F2] text-[#222]"
+        >
+          <motion.h2
+            className="font-montserrat text-3xl md:text-5xl font-bold mb-7"
+            initial={{ opacity: 0, y: 60 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.9 }}
+          >ご予約 / Reservation</motion.h2>
+          <p className="text-lg md:text-2xl mb-5 text-center">
+            ご予約は <b>InstagramのDM</b> より承っております。<br />
+            ご希望の日時・人数をお送りください。スタッフより折り返しご連絡いたします。
+          </p>
+          <div className="flex justify-center mb-8">
+            <AnimatedButton
+              href="https://www.instagram.com/stokyoshishalounge/"
+              accent={theme.accent}
+            >Instagram DMで予約</AnimatedButton>
+          </div>
+          <div className="max-w-lg mx-auto">
+            <h3 className="font-semibold text-lg mb-2">よくあるご質問</h3>
+            <ul className="text-base space-y-1">
+              <li>Q. 最終受付は何時？<br /><b>A.</b> 17:00まで受付</li>
+              <li>Q. キャンセル料は？<br /><b>A.</b> 直前キャンセルのみ￥1,000</li>
+              <li>Q. 1名利用もOK？<br /><b>A.</b> 可能です（ご予約推奨）</li>
+            </ul>
+            <div className="text-xs mt-6 text-[#C6A33B]">
+              ※20歳未満のお客様にはシーシャを提供できません。<br />
+              ※店内はキャッシュレス決済専用です。
+            </div>
+          </div>
+        </section>
+      </SectionFadeIn>
+
+      {/* Access */}
+      <SectionFadeIn>
+        <section
+          id="access"
+          ref={sectionRefs[4]}
+          className="py-24 bg-[#fffbe8] text-[#222]"
+        >
+          <motion.h2
+            className="font-montserrat text-3xl md:text-5xl font-bold mb-7"
+            initial={{ opacity: 0, x: -70 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.7 }}
+          >アクセス / Access</motion.h2>
+          <ul className="text-lg mb-5">
+            <li>〒106-0031 東京都港区西麻布4-10-6 NTビルB1</li>
+            <li>広尾駅4番出口より徒歩7分／六本木駅より徒歩14分</li>
+          </ul>
+          <iframe
+            title="Google Map"
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3242.0775409053936!2d139.7178155764209!3d35.65868237259045!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x60188b87836c9f9d%3A0xa9ff4e8b248a5da3!2zUy1UT0tZTyDmoJjlroXooZfml6XmnKzjgqvjg7zjgqTjga7jg6vjg4PjgqTjg6vjg7zjgpLoqIDnvJbplqLpmZDmnYQg4oiS44Gu44Kk44OJ44Oz44Kq44G744Oz44Oq44Or44Oz44Kw44K444Os!5e0!3m2!1sja!2sjp!4v1715937214527!5m2!1sja!2sjp"
+            width="100%"
+            height="220"
+            style={{ border: 0 }}
+            allowFullScreen
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            className="rounded-xl border border-[#C6A33B]/30 shadow my-4"
+          ></iframe>
+          <div className="mt-4">
+            <h3 className="font-semibold text-base mb-1">ご案内</h3>
+            <ul className="text-base space-y-1">
+              <li>広尾駅から：外苑西通り（首都高下）を西麻布交差点方向へ進み、交差点から渋谷方面へ1本目を左折。NTビル地下1階が入口。</li>
+              <li className="mt-2">当店は <b>キャッシュレス決済専用</b> です。現金はご利用いただけません。</li>
+            </ul>
+          </div>
+        </section>
+      </SectionFadeIn>
+
+      {/* Contact */}
+      <SectionFadeIn>
+        <section
+          id="contact"
+          ref={sectionRefs[5]}
+          className="py-24 bg-[#F7F6F2] text-[#222]"
+        >
+          <motion.h2
+            className="font-montserrat text-3xl md:text-5xl font-bold mb-7"
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+          >お問い合わせ / Contact</motion.h2>
+          <ul className="text-lg mb-8 space-y-2">
+            <li><b>Q. 持ち込みは可能？</b><br />A. ドリンク・フード持ち込みはご遠慮ください。</li>
+            <li><b>Q. Wi-Fiは？</b><br />A. 店内全席Wi-Fi完備</li>
+            <li><b>Q. 電源席は？</b><br />A. ソファ席全てでご利用可</li>
+          </ul>
+          <div className="flex flex-col items-center gap-4">
+            <AnimatedButton
+              href="https://www.instagram.com/stokyoshishalounge/"
+              accent={theme.accent}
+            >Instagram DMで問い合わせ</AnimatedButton>
+            <div className="text-xs text-[#ad9833] mt-1">ご質問・ご要望はInstagram DMにてお気軽にどうぞ。</div>
+          </div>
+        </section>
+      </SectionFadeIn>
+
+      {/* Footer */}
+      <footer className="bg-[#222] text-[#F7F6F2] text-center py-8 mt-6">
+        <div className="font-montserrat tracking-widest text-base">? 2025 S TOKYO SHISHA LOUNGE</div>
+        <a
+          href="https://www.instagram.com/stokyoshishalounge/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block text-[#C6A33B] hover:text-[#F7F6F2] mt-3"
+        >Instagram</a>
+      </footer>
+
+      {/* カスタムCSSアニメ・フォント */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@500;700&family=Noto+Sans+JP:wght@400;500&display=swap');
+        .font-montserrat { font-family: 'Montserrat', 'Noto Sans JP', Arial, sans-serif; }
+        .font-noto { font-family: 'Noto Sans JP', 'Montserrat', Arial, sans-serif; }
+        @keyframes fadein { from { opacity: 0 } to { opacity: 1 } }
+        .animate-fadein { animation: fadein 2.5s 0.4s both; }
+        html { scroll-behavior: smooth; }
+      `}</style>
+    </div>
+  );
+}
